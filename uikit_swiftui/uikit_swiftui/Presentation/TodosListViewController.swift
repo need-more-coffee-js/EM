@@ -9,6 +9,8 @@ import UIKit
 import SnapKit
 
 final class TodosListViewController: UIViewController {
+    
+    private let segmentedControl = UISegmentedControl(items: ["UIKit","SwiftUI"])
 
     private let viewModel: TodosListViewModel
 
@@ -29,23 +31,47 @@ final class TodosListViewController: UIViewController {
 
         setupUI()
         bind()
-
+        setupSegmentedControl()
+        
         viewModel.onViewDidLoad()
+    }
+    
+    private func setupSegmentedControl(){
+        segmentedControl.selectedSegmentIndex = 0
+        segmentedControl.addTarget(
+            self,
+            action: #selector(segmentChanged),
+            for: .valueChanged
+        )
+    }
+    
+    @objc private func segmentChanged() {
+        viewModel.changeDisplayMode(to: segmentedControl.selectedSegmentIndex)
     }
 
     private func setupUI() {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(TodoCell.self, forCellReuseIdentifier: TodoCell.reuseID)
+        tableView.register(SwiftUITodoCell.self, forCellReuseIdentifier: SwiftUITodoCell.reuseID)
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 72
 
         refreshControl.addTarget(self, action: #selector(onRefresh), for: .valueChanged)
         tableView.refreshControl = refreshControl
-
+        
+        view.addSubview(segmentedControl)
+        segmentedControl.selectedSegmentIndex = 0
+        segmentedControl.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(16)
+            make.leading.trailing.equalToSuperview().inset(10)
+        }
+        
         view.addSubview(tableView)
         tableView.snp.makeConstraints { make in
-            make.edges.equalTo(view.safeAreaLayoutGuide)
+            make.top.equalTo(segmentedControl).inset(50)
+            make.leading.trailing.equalTo(view.safeAreaLayoutGuide)
+            make.bottom.equalTo(view.safeAreaLayoutGuide)
         }
     }
 
@@ -57,7 +83,6 @@ final class TodosListViewController: UIViewController {
                 break
 
             case .loading:
-                
                 break
 
             case .content:
@@ -91,12 +116,18 @@ extension TodosListViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: TodoCell.reuseID, for: indexPath)
-        guard let todoCell = cell as? TodoCell else { return cell }
-
-        let vm = viewModel.cellViewModel(at: indexPath.row)
-        todoCell.configure(vm)
-        return todoCell
+        switch viewModel.cellType() {
+        case .uikit:
+            let cell = tableView.dequeueReusableCell(withIdentifier: "TodoCell", for: indexPath) as! TodoCell
+            let vm = viewModel.cellViewModel(at: indexPath.row)
+            cell.configure(vm)
+            return cell
+        case .swiftui:
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SwiftUICell", for: indexPath) as! SwiftUITodoCell
+            let vm = viewModel.cellViewModel(at: indexPath.row)
+            cell.configure(with: vm)
+            return cell
+        }
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {

@@ -15,6 +15,10 @@ final class TodosListViewModel {
     private(set) var state: TodosListViewState = .idle {
         didSet { onStateChange?(state) }
     }
+    
+    private(set) var displayMode: CellDisplayMode = .uikit{
+        didSet { onStateChange?(state) }
+    }
 
     // Dependencies
     private let repository: TodosRepository
@@ -45,6 +49,14 @@ final class TodosListViewModel {
 
     func didSelectRow(at index: Int) {
         router?.showTodoDetails(todo: items[index])
+    }
+    
+    func changeDisplayMode(to index: Int){
+        displayMode = (index == 0) ? .uikit : .swiftui
+    }
+    
+    func cellType() -> CellDisplayMode{
+        displayMode
     }
 
     private func load() {
